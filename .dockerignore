@@ -1,0 +1,11 @@
+.git
+.github
+third_party
+docs
+build
+obj_dir
+*.vcd
+*.fst
+*.wad
+*.WAD
+*.zip

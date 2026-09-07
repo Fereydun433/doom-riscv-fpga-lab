@@ -1,0 +1,25 @@
+name: RTL smoke simulation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build tool environment
+        run: docker build -t doom-fpga-lab .
+      - name: Report tool versions
+        run: docker run --rm doom-fpga-lab make doctor
+      - name: Run the counter experiment
+        run: docker run --rm doom-fpga-lab make sim

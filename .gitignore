@@ -1,0 +1,10 @@
+/build/
+/obj_dir/
+*.vcd
+*.fst
+*.wad
+*.WAD
+*.zip
+__pycache__/
+.DS_Store
+Thumbs.db
