@@ -32,6 +32,15 @@ module hello_soc (
         32'h1000_0004;
 
     logic [31:0] ram [0:16383];
+        localparam logic [31:0] TIMER_ADDR = 32'h1000_0008;
+    logic [31:0] timer_cycles;
+
+    always_ff @(posedge clk) begin
+        if (!resetn)
+            timer_cycles <= 32'd0;
+        else
+            timer_cycles <= timer_cycles + 32'd1;
+    end
 
     string firmware_path;
 
@@ -124,6 +133,11 @@ module hello_soc (
                      mem_wstrb == 4'b1111) begin
                 exit_code <= mem_wdata;
                 done <= 1'b1;
+            end
+                        else if (!mem_instr &&
+                     mem_addr == TIMER_ADDR &&
+                     mem_wstrb == 4'b0000) begin
+                mem_rdata <= timer_cycles;
             end
             else begin
                 bus_fault <= 1'b1;

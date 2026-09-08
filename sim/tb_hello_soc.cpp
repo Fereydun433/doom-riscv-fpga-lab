@@ -41,7 +41,7 @@ int main(int argc, char **argv)
     dut.resetn = 1;
 
     std::string received;
-    const std::string expected = "Hello RISC-V\n";
+        const std::string expected = "Hello RISC-V\nTimer OK\n";
     bool passed = false;
     bool stopped = false;
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
             passed = dut.exit_code == 0 && received == expected;
 
             if (passed)
-                std::cout << "PASS: Hello RISC-V, exit=0.\n";
+                                std::cout << "PASS: Hello RISC-V and timer, exit=0.\n";
             else
                 std::cerr << "FAIL: wrong output or exit code\n";
 
