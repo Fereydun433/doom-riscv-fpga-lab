@@ -7,6 +7,8 @@ RUN apt-get update \
         git \
         python3 \
         verilator \
+ 	gcc-riscv64-unknown-elf \
+        binutils-riscv64-unknown-elf \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /work

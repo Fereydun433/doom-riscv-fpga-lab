@@ -1,0 +1,8 @@
+`verilator_config
+lint_off -rule DECLFILENAME -file "*/third_party/picorv32/picorv32.v"
+lint_off -rule WIDTH -file "*/third_party/picorv32/picorv32.v"
+lint_off -rule UNUSEDSIGNAL -file "*/third_party/picorv32/picorv32.v"
+lint_off -rule UNUSEDPARAM -file "*/third_party/picorv32/picorv32.v"
+lint_off -rule GENUNNAMED -file "*/third_party/picorv32/picorv32.v"
+lint_off -rule BLKSEQ -file "*/third_party/picorv32/picorv32.v"
+lint_off -rule PINCONNECTEMPTY -file "*/rtl/hello_soc.sv"
