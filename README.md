@@ -23,10 +23,11 @@ software. The long-term goal is to run classic DOOM on a simulated system
 and later explore deployment on an FPGA board.
 
 The current system boots a compiled C program on PicoRV32, prints through
-a memory-mapped console, and reads a hardware cycle timer.
+a memory-mapped console, reads a hardware cycle timer, and renders a
+64 × 64 framebuffer test image.
 
-**Current milestone:** verified bare-metal firmware execution with a
-memory-mapped timer. DOOM integration is planned.
+**Current milestone:** 1 MiB program RAM with passing timer and
+4,096-pixel framebuffer tests. DOOM integration is planned.
 
 ## What Works
 
@@ -34,10 +35,11 @@ memory-mapped timer. DOOM integration is planned.
 |---|---|
 | RTL learning exercise | 8-bit counter with reset, enable, hold and rollover checks |
 | Processor | PicoRV32 configured for RV32I |
-| Memory | 64 KiB RAM initialized from a firmware hex image |
+| Memory | 1 MiB RAM initialized from a firmware hex image |
 | Firmware startup | Stack setup, `.bss` clearing and entry into `main` |
 | Console | Memory-mapped output captured by the C++ testbench |
 | Timer | Read-only 32-bit cycle counter |
+| Framebuffer | 64 × 64 pixels, 32-bit RGB words, 16 KiB |
 | Completion | Memory-mapped exit code checked by the testbench |
 | Build workflow | Firmware compilation and RTL simulation through Make |
 | Execution environment | Docker Desktop with Linux containers on Windows |
@@ -46,10 +48,11 @@ memory-mapped timer. DOOM integration is planned.
 
 ```mermaid
 flowchart TD
-    CPU["PicoRV32 · RV32I"] <--> RAM["64 KiB RAM · firmware and data"]
+    CPU["PicoRV32 · RV32I"] <--> RAM["1 MiB RAM · firmware and data"]
     CPU <--> MMIO["Memory-mapped I/O"]
     MMIO --> Console["Console and exit registers"]
     MMIO <--> Timer["32-bit cycle timer"]
+    MMIO <--> FB["16 KiB framebuffer"]
     Console --> TB["C++ testbench · output checks and VCD"]
 ```
 
@@ -64,11 +67,19 @@ board-specific interfaces are future work.
 
 | Address | Resource | Access |
 |---|---|---|
-| `0x00000000–0x0000FFFF` | 64 KiB RAM | Instruction fetches and data reads/writes |
+| `0x00000000–0x000FFFFF` | 1 MiB RAM | Instruction fetches and data reads/writes |
 | `0x10000000` | Console | Byte or word write; low byte is emitted |
 | `0x10000004` | Exit register | Word write; zero indicates firmware success |
 | `0x10000008` | Cycle timer | Read |
+| `0x20000000–0x20003FFF` | 16 KiB framebuffer | Data reads/writes |
 | Other addresses | Unmapped | Reported as a bus fault |
+
+Program RAM has been expanded to 1 MiB, with matching RTL addressing,
+linker configuration and HEX image generation. The existing timer and
+4,096-pixel framebuffer tests pass with this configuration. This verifies
+the current firmware workflow; it is not an exhaustive RAM test.
+
+Test log: [1 MiB RAM simulation](docs/evidence/ram-1mib-simulation.log).
 
 The timer increments once per rising clock edge after reset is released.
 It counts cycles, not milliseconds, and wraps at 32 bits.
@@ -113,7 +124,8 @@ Expected output:
 ```text
 Hello RISC-V
 Timer OK
-PASS: Hello RISC-V and timer, exit=0.
+Frame OK
+PASS: timer and 4096 framebuffer pixels, exit=0.
 ```
 
 The bind mount makes the current source files available inside Docker
@@ -137,14 +149,18 @@ PASS: reset, increment, hold, rollover.
 |---|---|
 | `build/riscv/hello.elf` | Linked RISC-V executable |
 | `build/riscv/hello.bin` | Raw firmware image |
-| `build/riscv/hello.hex` | RAM initialization: 16384 hexadecimal words |
+| `build/riscv/hello.hex` | RAM initialization: 262144 hexadecimal words |
 | `build/riscv/obj_dir/Vhello_soc` | Executable RTL simulator |
-| `build/riscv/hello_soc.vcd` | System waveform |
+| `build/riscv/hello_soc.vcd` | System waveform, generated with `+trace` |
+| `build/riscv/framebuffer.ppm` | Captured framebuffer image |
+| `build/riscv/framebuffer.png` | Image converted by `scripts/frame_to_png.py` |
 | `build/tick_counter.vcd` | Counter waveform |
 
-The current timer firmware produced a **476-byte binary** with GCC 13.2.0
-and `-O0`. The RAM image is padded to 64 KiB; firmware size and RAM capacity
-are different measurements.
+The earlier timer-only milestone produced a **476-byte binary** with
+GCC 13.2.0 and `-O0`, using 64 KiB RAM. The current framebuffer firmware
+produced a **904-byte binary** with 1 MiB RAM. The RAM image is padded
+to the configured capacity; firmware size and RAM capacity are different
+measurements.
 
 ## Validation
 
@@ -155,6 +171,8 @@ Desktop and Verilator:
 - RISC-V boot: the expected console text and zero exit code were observed.
 - Timer: firmware successfully read the counter and detected an elapsed
   interval of at least 1000 cycles.
+- Framebuffer: firmware verified all 4,096 pixels and the testbench exported the image.
+- RAM expansion: the existing firmware and framebuffer tests passed with 1 MiB RAM.
 - Automated build: `make sim-riscv` completed successfully.
 
 The testbench also checks for CPU traps, bus faults, unexpected console
@@ -169,6 +187,8 @@ testing and physical FPGA timing remain outside the current validation.
 - [Counter waveform review](docs/evidence/counter-waveform-review.md)
 - [Initial RISC-V boot log](docs/evidence/riscv-hello.log)
 - [RISC-V timer log](docs/evidence/riscv-timer.log)
+- [Framebuffer simulation log](docs/evidence/framebuffer-simulation.log)
+- [1 MiB RAM simulation log](docs/evidence/ram-1mib-simulation.log)
 
 ![Verified counter waveforms](docs/evidence/counter-waveforms.png)
 
@@ -185,9 +205,51 @@ not establish an achievable FPGA clock frequency or host simulation speed.
 | `scripts/bin2hex.py` | Binary-to-RAM-image conversion |
 | `third_party/picorv32/` | Upstream processor submodule |
 | `third_party/doomgeneric/` | Upstream DOOM port submodule |
-| `docs/evidence/` | Recorded logs and counter waveform analysis |
+| `scripts/frame_to_png.py` | PPM-to-PNG conversion using the Python standard library |
+| `docs/evidence/` | Recorded logs, waveforms and framebuffer image |
 | `Makefile` | Build and simulation targets |
 | `Dockerfile` | Linux tool environment |
+
+## Framebuffer demonstration
+
+The simulated PicoRV32 system runs bare-metal C firmware that draws
+a 64 × 64 color pattern into a memory-mapped framebuffer.
+
+| Property | Value |
+| --- | --- |
+| Resolution | 64 × 64 pixels |
+| Pixel format | 32-bit word, `0x00RRGGBB` |
+| Framebuffer capacity | 16 KiB, separate from the 1 MiB program RAM |
+| Address range | `0x20000000`–`0x20003FFF` |
+
+The firmware writes and verifies all 4,096 pixels. The C++ testbench
+captures framebuffer read responses and exports a PPM image after
+checking the console output, exit code and pixel coverage. A Python
+script converts the PPM file to PNG using only the standard library.
+
+![Framebuffer generated by the simulated RISC-V system](docs/evidence/framebuffer.png)
+
+### Reproduce on Windows CMD
+
+Run these commands from the project root with Docker Desktop running:
+
+```bat
+docker run --rm --mount "type=bind,source=%cd%,target=/work" doom-fpga-lab make sim-riscv
+docker run --rm --mount "type=bind,source=%cd%,target=/work" doom-fpga-lab python3 scripts/frame_to_png.py
+```
+
+The generated image is saved to `build/riscv/framebuffer.png`.
+Each simulation run removes previous generated images, so run the
+conversion script again after simulation.
+
+Waveform tracing is optional. After building the simulator, enable it with:
+
+```bat
+docker run --rm --mount "type=bind,source=%cd%,target=/work" doom-fpga-lab ./build/riscv/obj_dir/Vhello_soc +trace
+```
+
+This milestone demonstrates framebuffer access in RTL simulation.
+DOOM execution and deployment to a physical FPGA remain future work.
 
 ## Roadmap
 
@@ -199,7 +261,9 @@ not establish an achievable FPGA clock frequency or host simulation speed.
 - [x] Add and exercise a memory-mapped cycle timer.
 - [ ] Define a DOOM memory budget and software runtime.
 - [ ] Provide a software time service with defined units.
-- [ ] Implement a framebuffer and render a test image.
+- [x] Implement a framebuffer and render a test image.
+- [x] Expand program RAM to 1 MiB and rerun the integration tests.
+- [ ] Check expanded RAM addressing for aliasing.
 - [ ] Add keyboard input and game-data access.
 - [ ] Integrate DoomGeneric and produce the first game frame.
 - [ ] Demonstrate interactive gameplay and measure simulation performance.
@@ -234,29 +298,3 @@ license. Game WAD files are supplied separately and are not included.
 ---
 
 Maintained by [Fereydun433](https://github.com/Fereydun433).
-## Framebuffer demonstration
-
-The simulated PicoRV32 system runs bare-metal C firmware that draws
-a 64 × 64 color pattern into a memory-mapped framebuffer.
-
-| Property | Value |
-| --- | --- |
-| Resolution | 64 × 64 pixels |
-| Pixel format | 32-bit word, `0x00RRGGBB` |
-| Framebuffer capacity | 16 KiB, separate from the 64 KiB program RAM |
-| Address range | `0x20000000`–`0x20003FFF` |
-
-The firmware writes and verifies all 4,096 pixels. The C++ testbench
-captures framebuffer read responses and exports a PPM image after
-checking the console output, exit code and pixel coverage. A Python
-script converts the PPM file to PNG using only the standard library.
-
-![Framebuffer generated by the simulated RISC-V system](docs/evidence/framebuffer.png)
-
-### Reproduce on Windows CMD
-
-Run these commands from the project root with Docker Desktop running:
-
-```bat
-docker run --rm --mount "type=bind,source=%cd%,target=/work" doom-fpga-lab make sim-riscv
-docker run --rm --mount "type=bind,source=%cd%,target=/work" doom-fpga-lab python3 scripts/frame_to_png.py

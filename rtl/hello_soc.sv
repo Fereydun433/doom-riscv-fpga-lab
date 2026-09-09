@@ -23,7 +23,7 @@ module hello_soc (
 );
 
     localparam logic [31:0] RAM_BYTES =
-        32'h0001_0000;
+        32'h0010_0000;
 
     localparam logic [31:0] CONSOLE_ADDR =
         32'h1000_0000;
@@ -31,7 +31,7 @@ module hello_soc (
     localparam logic [31:0] EXIT_ADDR =
         32'h1000_0004;
 
-    logic [31:0] ram [0:16383];
+    logic [31:0] ram [0:262143];
             localparam logic [31:0] FB_BASE = 32'h2000_0000;
             localparam logic [31:0] FB_END = 32'h2000_4000;
             logic [31:0] framebuffer [0:4095];
@@ -56,7 +56,7 @@ module hello_soc (
 
     picorv32 #(
         .PROGADDR_RESET(32'h0000_0000),
-        .STACKADDR(32'h0001_0000),
+        .STACKADDR(32'h0010_0000),
         .ENABLE_COUNTERS(0),
         .COMPRESSED_ISA(0),
         .ENABLE_MUL(0),
@@ -116,11 +116,11 @@ module hello_soc (
             mem_rdata <= 32'b0;
 
             if (mem_addr < RAM_BYTES) begin
-                mem_rdata <= ram[mem_addr[15:2]];
+                mem_rdata <= ram[mem_addr[19:2]];
 
                 for (int lane = 0; lane < 4; lane++) begin
                     if (mem_wstrb[lane])
-                        ram[mem_addr[15:2]][lane*8 +: 8]
+                        ram[mem_addr[19:2]][lane*8 +: 8]
                             <= mem_wdata[lane*8 +: 8];
                 end
             end

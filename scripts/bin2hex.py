@@ -6,10 +6,10 @@ output_file = Path(sys.argv[2])
 
 data = input_file.read_bytes()
 program_size = len(data)
-ram_size = 64 * 1024
+ram_size = 1024 * 1024
 
 if not 0 < program_size <= ram_size:
-    raise SystemExit("Program must fit in 64 KiB RAM")
+    raise SystemExit("Program must fit in 1 MiB RAM")
 
 data += b"\xa5" * (ram_size - program_size)
 
