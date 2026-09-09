@@ -52,9 +52,37 @@ static int draw_frame(void)
     return 1;
 }
 
+extern volatile unsigned int _ram_probe_start[];
+
+static int test_ram_addresses(void)
+{
+    volatile unsigned int *const probe = _ram_probe_start;
+
+    for (unsigned int pass = 0; pass < 2; pass++) {
+        unsigned int seed = pass == 0 ? 0x13579BDFu : 0xECA86420u;
+
+        for (unsigned int i = 0; i < 15; i++)
+            probe[i << 14] = seed ^ (i << 16) ^ i;
+
+        for (unsigned int i = 0; i < 15; i++) {
+            unsigned int expected = seed ^ (i << 16) ^ i;
+            if (probe[i << 14] != expected)
+                return 0;
+        }
+    }
+
+    return 1;
+}
+
 int main(void)
 {
     put_text("Hello RISC-V\n");
+
+    if (!test_ram_addresses()) {
+        put_text("RAM FAIL\n");
+        return 3;
+    }
+    put_text("RAM OK\n");
 
     unsigned int start = read_timer();
 

@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 
     std::string received;
     const std::string expected =
-        "Hello RISC-V\nTimer OK\nFrame OK\n";
+        "Hello RISC-V\nRAM OK\nTimer OK\nFrame OK\n";
 
     bool passed = false;
     bool stopped = false;
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 
             if (passed)
                 std::cout
-                    << "PASS: timer and 4096 framebuffer pixels, exit=0.\n";
+                    << "PASS: RAM addressing, timer and 4096 framebuffer pixels, exit=0.\n";
             else
                 std::cerr
                     << "FAIL: output, exit code, pixel capture or image file\n";
