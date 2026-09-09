@@ -32,6 +32,9 @@ module hello_soc (
         32'h1000_0004;
 
     logic [31:0] ram [0:16383];
+            localparam logic [31:0] FB_BASE = 32'h2000_0000;
+            localparam logic [31:0] FB_END = 32'h2000_4000;
+            logic [31:0] framebuffer [0:4095];
         localparam logic [31:0] TIMER_ADDR = 32'h1000_0008;
     logic [31:0] timer_cycles;
 
@@ -138,6 +141,17 @@ module hello_soc (
                      mem_addr == TIMER_ADDR &&
                      mem_wstrb == 4'b0000) begin
                 mem_rdata <= timer_cycles;
+            end
+                       else if (!mem_instr &&
+                     mem_addr >= FB_BASE &&
+                     mem_addr < FB_END) begin
+                mem_rdata <= framebuffer[mem_addr[13:2]];
+
+                for (int lane = 0; lane < 4; lane++) begin
+                    if (mem_wstrb[lane])
+                        framebuffer[mem_addr[13:2]][lane*8 +: 8]
+                            <= mem_wdata[lane*8 +: 8];
+                end
             end
             else begin
                 bus_fault <= 1'b1;

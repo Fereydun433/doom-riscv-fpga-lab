@@ -23,6 +23,35 @@ static unsigned int read_timer(void)
     return *timer;
 }
 
+static unsigned int pixel_color(unsigned int index)
+{
+    unsigned int x = index & 63u;
+    unsigned int y = index >> 6;
+
+    unsigned int red = x << 2;
+    unsigned int green = y << 2;
+    unsigned int blue = ((x ^ y) & 8u) ? 255u : 32u;
+
+    return (red << 16) | (green << 8) | blue;
+}
+
+static int draw_frame(void)
+{
+    volatile unsigned int *const fb =
+        (volatile unsigned int *)0x20000000u;
+
+    for (unsigned int i = 0; i < 4096; i++)
+        fb[i] = pixel_color(i);
+
+    for (unsigned int i = 0; i < 4096; i++)
+    {
+        if (fb[i] != pixel_color(i))
+            return 0;
+    }
+
+    return 1;
+}
+
 int main(void)
 {
     put_text("Hello RISC-V\n");
@@ -36,6 +65,14 @@ int main(void)
         if (elapsed >= 1000u)
         {
             put_text("Timer OK\n");
+
+            if (!draw_frame())
+            {
+                put_text("Frame FAIL\n");
+                return 2;
+            }
+
+            put_text("Frame OK\n");
             return 0;
         }
     }
