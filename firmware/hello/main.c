@@ -1,4 +1,5 @@
 #include "../runtime/memory.h"
+
 static void put_char(char c)
 {
     volatile unsigned int *const console =
@@ -53,6 +54,7 @@ static int draw_frame(void)
     return 1;
 }
 
+#ifdef RAM_ADDRESS_TEST
 extern volatile unsigned int _ram_probe_start[];
 
 static int test_ram_addresses(void)
@@ -75,21 +77,26 @@ static int test_ram_addresses(void)
     return 1;
 }
 
+#endif
+
 int main(void)
 {
     put_text("Hello RISC-V\n");
 
+#ifdef RAM_ADDRESS_TEST
     if (!test_ram_addresses()) {
         put_text("RAM FAIL\n");
         return 3;
     }
     put_text("RAM OK\n");
+#endif
+
     if (!test_memory_functions()) {
         put_text("Memory FAIL\n");
         return 4;
     }
-
     put_text("Memory OK\n");
+
     unsigned int start = read_timer();
 
     for (unsigned int attempt = 0; attempt < 256; attempt++)

@@ -42,8 +42,18 @@ SECTIONS
         _bss_end = .;
     } > ram :data
 
+    .ram_probe 0x00010000 (NOLOAD) :
+    {
+        _ram_probe_start = .;
+        . += 0x000E0004;
+        _ram_probe_end = .;
+    } > ram :data
+
+    ASSERT(_bss_end <= _ram_probe_start,
+           "Firmware overlaps RAM probe area")
+
     _stack_top = ORIGIN(ram) + LENGTH(ram);
 
-    ASSERT(_bss_end <= _stack_top - 4096,
+    ASSERT(_ram_probe_end <= _stack_top - 4096,
            "Not enough room for stack")
 }

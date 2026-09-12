@@ -12,9 +12,18 @@
 
 int main(int argc, char **argv)
 {
-    std::ifstream firmware("build/riscv/hello.hex");
+    bool ram_test = false;
+    std::string firmware_path = "build/riscv/hello.hex";
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "+ram-test")
+            ram_test = true;
+        if (arg.rfind("+firmware=", 0) == 0)
+            firmware_path = arg.substr(10);
+    }
+    std::ifstream firmware(firmware_path);
     if (!firmware) {
-        std::cerr << "FAIL: hello.hex is missing\n";
+        std::cerr << "FAIL: firmware file is missing: " << firmware_path << "\n";
         return 1;
     }
 
@@ -78,8 +87,9 @@ int main(int argc, char **argv)
     dut.resetn = 1;
 
     std::string received;
-        const std::string expected =
-        "Hello RISC-V\nRAM OK\nMemory OK\nTimer OK\nFrame OK\n";
+    const std::string expected = ram_test
+        ? "Hello RISC-V\nRAM OK\nMemory OK\nTimer OK\nFrame OK\n"
+        : "Hello RISC-V\nMemory OK\nTimer OK\nFrame OK\n";
 
     bool passed = false;
     bool stopped = false;
@@ -142,7 +152,9 @@ int main(int argc, char **argv)
 
             if (passed)
                 std::cout
-                    << "PASS: RAM addressing, memory functions, timer and 4096 framebuffer pixels, exit=0.\n";
+                    << (ram_test
+                        ? "PASS: RAM addressing, memory functions, timer and 4096 framebuffer pixels, exit=0.\n"
+                        : "PASS: memory functions, timer and 4096 framebuffer pixels, exit=0.\n");
             else
                 std::cerr
                     << "FAIL: output, exit code, pixel capture or image file\n";

@@ -1,0 +1,6 @@
+﻿./build/riscv/obj_dir/Vhello_soc
+Hello RISC-V
+Memory OK
+Timer OK
+Frame OK
+PASS: memory functions, timer and 4096 framebuffer pixels, exit=0.

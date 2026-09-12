@@ -15,12 +15,13 @@ RUNTIME_SRC := firmware/runtime/memory.c firmware/runtime/test_memory.c
 FW_FLAGS := -march=rv32i -mabi=ilp32 -mno-relax -msmall-data-limit=0
 FW_FLAGS += -ffreestanding -fno-builtin -Wall -Wextra -O0 -g
 
-.PHONY: help doctor sim sim-riscv
+.PHONY: help doctor sim sim-riscv sim-ram
 .DELETE_ON_ERROR:
 
 help:
 >@echo "make sim: run the counter"
 >@echo "make sim-riscv: build and run Hello RISC-V"
+>@echo "make sim-ram: run the reserved RAM address test and integration checks"
 >@echo "make doctor: show tool versions"
 
 doctor:
@@ -53,3 +54,18 @@ $(CPU_BIN): $(CPU_SRC) sim/picorv32.vlt Makefile
 
 sim-riscv: $(FW).hex $(CPU_BIN)
 >./$(CPU_BIN)
+
+RAM_FW := build/riscv/ram_test
+
+$(RAM_FW).elf: firmware/hello/main.c firmware/hello/start.S firmware/hello/link_ram_test.ld $(RUNTIME_SRC) firmware/runtime/memory.h Makefile
+>mkdir -p build/riscv
+>$(RISCV_PREFIX)gcc $(FW_FLAGS) -DRAM_ADDRESS_TEST -nostdlib -Wl,--build-id=none -T firmware/hello/link_ram_test.ld firmware/hello/start.S firmware/hello/main.c $(RUNTIME_SRC) -o $@
+
+$(RAM_FW).bin: $(RAM_FW).elf
+>$(RISCV_PREFIX)objcopy -O binary $< $@
+
+$(RAM_FW).hex: $(RAM_FW).bin scripts/bin2hex.py
+>python3 scripts/bin2hex.py $< $@
+
+sim-ram: $(RAM_FW).hex $(CPU_BIN)
+>./$(CPU_BIN) +ram-test +firmware=$(RAM_FW).hex

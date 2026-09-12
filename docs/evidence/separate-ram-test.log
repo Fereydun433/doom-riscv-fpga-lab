@@ -1,0 +1,7 @@
+﻿./build/riscv/obj_dir/Vhello_soc +ram-test +firmware=build/riscv/ram_test.hex
+Hello RISC-V
+RAM OK
+Memory OK
+Timer OK
+Frame OK
+PASS: RAM addressing, memory functions, timer and 4096 framebuffer pixels, exit=0.
