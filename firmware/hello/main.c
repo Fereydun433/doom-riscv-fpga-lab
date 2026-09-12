@@ -1,3 +1,4 @@
+#include "../runtime/memory.h"
 static void put_char(char c)
 {
     volatile unsigned int *const console =
@@ -83,7 +84,12 @@ int main(void)
         return 3;
     }
     put_text("RAM OK\n");
+    if (!test_memory_functions()) {
+        put_text("Memory FAIL\n");
+        return 4;
+    }
 
+    put_text("Memory OK\n");
     unsigned int start = read_timer();
 
     for (unsigned int attempt = 0; attempt < 256; attempt++)

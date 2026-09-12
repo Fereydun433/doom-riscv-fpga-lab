@@ -11,6 +11,7 @@ CPU_BIN := build/riscv/obj_dir/Vhello_soc
 CPU_SRC := $(abspath rtl/hello_soc.sv third_party/picorv32/picorv32.v sim/tb_hello_soc.cpp)
 
 FW := build/riscv/hello
+RUNTIME_SRC := firmware/runtime/memory.c firmware/runtime/test_memory.c
 FW_FLAGS := -march=rv32i -mabi=ilp32 -mno-relax -msmall-data-limit=0
 FW_FLAGS += -ffreestanding -fno-builtin -Wall -Wextra -O0 -g
 
@@ -36,9 +37,9 @@ $(COUNTER_BIN): $(COUNTER_SRC) Makefile
 sim: $(COUNTER_BIN)
 >./$(COUNTER_BIN)
 
-$(FW).elf: firmware/hello/main.c firmware/hello/start.S firmware/hello/link.ld Makefile
+$(FW).elf: firmware/hello/main.c firmware/hello/start.S firmware/hello/link.ld $(RUNTIME_SRC) firmware/runtime/memory.h Makefile
 >mkdir -p build/riscv
->$(RISCV_PREFIX)gcc $(FW_FLAGS) -nostdlib -Wl,--build-id=none -T firmware/hello/link.ld firmware/hello/start.S firmware/hello/main.c -o $@
+>$(RISCV_PREFIX)gcc $(FW_FLAGS) -nostdlib -Wl,--build-id=none -T firmware/hello/link.ld firmware/hello/start.S firmware/hello/main.c $(RUNTIME_SRC) -o $@
 
 $(FW).bin: $(FW).elf
 >$(RISCV_PREFIX)objcopy -O binary $< $@
